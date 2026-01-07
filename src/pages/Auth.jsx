@@ -49,7 +49,7 @@ export default function Auth() {
         <div className="min-h-screen flex items-center justify-center bg-brand-dark p-4">
             <Card className="w-full max-w-md bg-brand-card border-brand-lime/20 shadow-2xl p-8">
                 <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold text-white mb-2">GymTracker Pro</h1>
+                    <h1 className="text-3xl font-bold text-white mb-2">GymBro Pro</h1>
                     <p className="text-gray-400">
                         {isLogin ? 'Inicia sesión para continuar' : 'Crea tu cuenta gratis'}
                     </p>

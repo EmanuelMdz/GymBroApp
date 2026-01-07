@@ -12,8 +12,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'GymTracker Pro',
-        short_name: 'GymTracker',
+        name: 'GymBro Pro',
+        short_name: 'GymBro Pro',
         description: 'Tu compañero de entrenamiento inteligente',
         theme_color: '#0f0f0f',
         icons: [

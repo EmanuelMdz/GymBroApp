@@ -15,7 +15,7 @@ function AppContent() {
   const { session, loading } = useAuth();
 
   if (loading) {
-    return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Cargando GymTracker...</div>;
+    return <div className="min-h-screen bg-brand-dark flex items-center justify-center text-white">Cargando GymBro Pro...</div>;
   }
 
   if (!session) {
