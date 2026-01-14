@@ -1,13 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useWorkout } from '../contexts/WorkoutContext';
+import { useExercises } from '../contexts/ExerciseContext';
 import { ActiveSession } from '../components/workout/ActiveSession';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
-import { ProgressRing } from '../components/common/ProgressRing';
 import { DataManagement } from '../components/common/DataManagement';
 import { Modal } from '../components/common/Modal';
 import { useNavigate } from 'react-router-dom';
-import { Bell, ChevronLeft, ChevronRight, Footprints, Flame, Info } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, TrendingUp, Calendar, Trophy } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -15,19 +15,47 @@ import { useAuth } from '../contexts/AuthContext';
 import { User } from 'lucide-react';
 
 export default function Home() {
-    const { activeSession, startSession, routine } = useWorkout();
-    const { profile, signOut } = useAuth(); // Get profile and signOut
+    const { activeSession, startSession, routine, history } = useWorkout();
+    const { exercises } = useExercises();
+    const { profile, signOut } = useAuth();
     const navigate = useNavigate();
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isRoutineSelectorOpen, setIsRoutineSelectorOpen] = useState(false);
 
     const today = new Date();
-    const startDate = startOfWeek(today, { weekStartsOn: 1 }); // Monday start
+    const startDate = startOfWeek(today, { weekStartsOn: 1 });
     const weekDays = Array.from({ length: 7 }).map((_, i) => addDays(startDate, i));
 
-    const todayRoutine = routine.find(d => d.dayOfWeek === today.getDay());
+    const todayRoutine = routine.find(d => d.day_of_week === today.getDay() || d.dayOfWeek === today.getDay());
 
-    // Use profile name or fallback to email fragment
     const userName = profile?.full_name || "Atleta";
+
+    // Calculate weekly stats
+    const weeklyStats = useMemo(() => {
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        
+        const weekSessions = history.filter(s => new Date(s.date) >= oneWeekAgo);
+        const totalVolume = weekSessions.reduce((acc, session) => {
+            return acc + (session.exercises || []).reduce((exAcc, ex) => {
+                return exAcc + (ex.sets || []).reduce((setAcc, set) => {
+                    return setAcc + ((set.weight || 0) * (set.reps || 0) * (set.completed ? 1 : 0));
+                }, 0);
+            }, 0);
+        }, 0);
+        
+        const totalSets = weekSessions.reduce((acc, session) => {
+            return acc + (session.exercises || []).reduce((exAcc, ex) => {
+                return exAcc + (ex.sets || []).filter(s => s.completed).length;
+            }, 0);
+        }, 0);
+
+        return {
+            sessions: weekSessions.length,
+            volume: totalVolume,
+            sets: totalSets
+        };
+    }, [history]);
 
     if (activeSession) {
         return <ActiveSession />;
@@ -39,7 +67,7 @@ export default function Home() {
             <header className="flex justify-between items-center">
                 <div>
                     <h1 className="text-xl font-bold font-sans">Hola {userName}</h1>
-                    <p className="text-brand-lime text-xs font-medium uppercase tracking-wider">Fitness Freak</p>
+                    <p className="text-brand-lime text-xs font-medium uppercase tracking-wider">Levanta Pesado 💪</p>
                 </div>
                 <Button variant="ghost" size="icon" className="rounded-full bg-brand-gray/50 text-white" onClick={() => setIsSettingsOpen(true)}>
                     <User size={20} />
@@ -82,91 +110,127 @@ export default function Home() {
                     <p className="text-sm font-medium opacity-70 mb-4">
                         {todayRoutine ? `${todayRoutine.exercises.length} ejercicios para hoy` : "Recupera energías"}
                     </p>
-                    {todayRoutine && todayRoutine.exercises.length > 0 ? (
+                    <div className="flex gap-2">
+                        {todayRoutine && todayRoutine.exercises.length > 0 ? (
+                            <Button
+                                className="bg-brand-dark text-white hover:bg-black border-none h-10 px-6 rounded-full text-xs"
+                                onClick={() => startSession(todayRoutine.id)}
+                            >
+                                Comenzar
+                            </Button>
+                        ) : (
+                            <Button
+                                className="bg-brand-dark text-white hover:bg-black border-none h-10 px-6 rounded-full text-xs"
+                                onClick={() => navigate('/routine')}
+                            >
+                                {todayRoutine ? 'Añadir Ejercicios' : 'Crear Rutina'}
+                            </Button>
+                        )}
                         <Button
-                            className="bg-brand-dark text-white hover:bg-black border-none h-10 px-6 rounded-full text-xs"
-                            onClick={() => startSession(todayRoutine.id)}
+                            className="bg-brand-dark/50 text-white hover:bg-black/50 border-none h-10 px-4 rounded-full text-xs"
+                            onClick={() => setIsRoutineSelectorOpen(true)}
                         >
-                            Comenzar
+                            Otra Rutina
                         </Button>
-                    ) : (
-                        <Button
-                            className="bg-brand-dark text-white hover:bg-black border-none h-10 px-6 rounded-full text-xs"
-                            onClick={() => navigate('/routine')}
-                        >
-                            {todayRoutine ? 'Añadir Ejercicios' : 'Crear Rutina'}
-                        </Button>
-                    )}
+                    </div>
                 </div>
-                {/* Decorative Image Placeholder or Icon */}
+                {/* Decorative Icon */}
                 <div className="absolute right-[-20px] bottom-[-20px] opacity-20 rotate-12">
-                    <Flame size={120} className="text-brand-dark" />
+                    <Dumbbell size={120} className="text-brand-dark" />
                 </div>
             </Card>
 
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4">
-                {/* Steps Card */}
-                <Card className="bg-[#E0C8FF] border-none text-brand-dark p-5">
-                    <div className="flex justify-between items-start mb-2">
-                        <span className="font-bold text-sm">Pasos</span>
-                        <Footprints size={18} className="opacity-50" />
-                    </div>
-                    <div className="flex flex-col">
-                        <span className="text-3xl font-bold">1,840</span>
-                        <span className="text-[10px] font-medium opacity-60">Objetivo: 6,000</span>
-                    </div>
-                    <div className="mt-4 h-2 w-full bg-black/10 rounded-full overflow-hidden">
-                        <div className="h-full bg-brand-dark w-[30%] rounded-full" />
-                    </div>
+            {/* Weekly Stats Grid */}
+            <div className="grid grid-cols-3 gap-3">
+                <Card className="bg-brand-card border-white/5 p-4 text-center">
+                    <Calendar size={20} className="mx-auto mb-2 text-brand-lime" />
+                    <span className="text-2xl font-bold text-white">{weeklyStats.sessions}</span>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Sesiones</p>
                 </Card>
-
-                {/* Goals Card */}
-                <Card className="bg-brand-card border-white/5 p-5 flex flex-col justify-between">
-                    <div>
-                        <div className="flex justify-between items-start mb-1">
-                            <span className="font-bold text-sm text-white">Mis Metas</span>
-                            <span className="bg-brand-lime text-brand-dark text-[10px] font-bold px-2 py-0.5 rounded-full">42%</span>
-                        </div>
-                        <p className="text-[10px] text-gray-400 leading-tight">Sigue así, puedes lograrlo.</p>
-                    </div>
-                    <div className="flex justify-center mt-2">
-                        {/* Placeholder for small chart or visual */}
-                        <div className="flex -space-x-2">
-                            <div className="h-8 w-8 rounded-full bg-brand-lime border-2 border-brand-card" />
-                            <div className="h-8 w-8 rounded-full bg-brand-purple border-2 border-brand-card" />
-                            <div className="h-8 w-8 rounded-full bg-white border-2 border-brand-card flex items-center justify-center text-[10px] font-bold text-brand-dark">+2</div>
-                        </div>
-                    </div>
+                <Card className="bg-brand-card border-white/5 p-4 text-center">
+                    <Dumbbell size={20} className="mx-auto mb-2 text-brand-purple" />
+                    <span className="text-2xl font-bold text-white">{weeklyStats.sets}</span>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Series</p>
+                </Card>
+                <Card className="bg-brand-card border-white/5 p-4 text-center">
+                    <TrendingUp size={20} className="mx-auto mb-2 text-green-400" />
+                    <span className="text-2xl font-bold text-white">{weeklyStats.volume >= 1000 ? `${(weeklyStats.volume / 1000).toFixed(1)}k` : weeklyStats.volume}</span>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide">Kg Vol.</p>
                 </Card>
             </div>
 
-            {/* Calories / Rings */}
-            <Card className="bg-brand-card border-white/5 p-6 flex items-center justify-between">
-                <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-brand-lime" />
-                        <div>
-                            <p className="text-xs text-gray-400">Objetivo</p>
-                            <p className="text-sm font-bold text-white">2000 Kcal</p>
-                        </div>
+            {/* Quick Access to Routine Days */}
+            {routine.length > 0 && (
+                <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                        <h2 className="text-sm font-bold text-white uppercase tracking-wide">Tu Semana</h2>
+                        <Button variant="ghost" size="sm" className="text-brand-lime text-xs" onClick={() => navigate('/routine')}>
+                            Ver todo
+                        </Button>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-brand-purple" />
-                        <div>
-                            <p className="text-xs text-gray-400">Quemadas</p>
-                            <p className="text-sm font-bold text-white">872 Kcal</p>
-                        </div>
+                    <div className="space-y-2">
+                        {routine.filter(day => day.exercises && day.exercises.length > 0).slice(0, 3).map(day => (
+                            <Card 
+                                key={day.id} 
+                                className="bg-brand-card border-white/5 p-4 flex justify-between items-center cursor-pointer hover:bg-brand-gray/50 transition-colors"
+                                onClick={() => startSession(day.id)}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-xl bg-brand-lime/20 flex items-center justify-center">
+                                        <Dumbbell size={18} className="text-brand-lime" />
+                                    </div>
+                                    <div>
+                                        <h3 className="font-semibold text-white">{day.name}</h3>
+                                        <p className="text-xs text-gray-400">{day.exercises.length} ejercicios</p>
+                                    </div>
+                                </div>
+                                <Button size="sm" className="bg-brand-lime text-brand-dark hover:bg-brand-lime/90 rounded-full px-4 text-xs font-bold">
+                                    Iniciar
+                                </Button>
+                            </Card>
+                        ))}
                     </div>
                 </div>
-                <div className="relative">
-                    <ProgressRing size={100} strokeWidth={8} progress={75} color="text-brand-lime" trackColor="text-brand-gray" />
-                    <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-brand-purple w-2 h-2 rounded-full absolute top-2 right-4 shadow-lg shadow-brand-purple" /> {/* Decorative dot */}
-                        <ProgressRing size={70} strokeWidth={8} progress={42} color="text-brand-purple" trackColor="text-transparent" className="absolute" />
-                    </div>
+            )}
+
+            {/* Empty State - No exercises configured */}
+            {routine.every(day => !day.exercises || day.exercises.length === 0) && (
+                <Card className="bg-brand-card border-white/5 p-6 text-center">
+                    <Dumbbell size={40} className="mx-auto mb-3 text-gray-500" />
+                    <h3 className="font-bold text-white mb-1">Configura tu rutina</h3>
+                    <p className="text-sm text-gray-400 mb-4">Agrega ejercicios a tus días para empezar a entrenar</p>
+                    <Button onClick={() => navigate('/routine')} className="bg-brand-lime text-brand-dark hover:bg-brand-lime/90">
+                        Crear Rutina
+                    </Button>
+                </Card>
+            )}
+
+            {/* Routine Selector Modal */}
+            <Modal
+                isOpen={isRoutineSelectorOpen}
+                onClose={() => setIsRoutineSelectorOpen(false)}
+                title="Seleccionar Rutina"
+            >
+                <div className="space-y-3">
+                    <p className="text-sm text-gray-400 mb-4">¿Qué rutina querés entrenar hoy?</p>
+                    {routine.filter(day => day.exercises && day.exercises.length > 0).map(day => (
+                        <button
+                            key={day.id}
+                            onClick={() => {
+                                startSession(day.id);
+                                setIsRoutineSelectorOpen(false);
+                            }}
+                            className="w-full p-4 bg-brand-gray/30 hover:bg-brand-gray/50 rounded-xl text-left transition-colors flex justify-between items-center"
+                        >
+                            <div>
+                                <h3 className="font-semibold text-white">{day.name}</h3>
+                                <p className="text-xs text-gray-400">{day.exercises.length} ejercicios</p>
+                            </div>
+                            <Dumbbell size={20} className="text-brand-lime" />
+                        </button>
+                    ))}
                 </div>
-            </Card>
+            </Modal>
 
             <Modal
                 isOpen={isSettingsOpen}

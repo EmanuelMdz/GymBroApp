@@ -3,7 +3,7 @@ import { Check, MoreHorizontal } from 'lucide-react';
 import { cn } from '../../utils/cn';
 import { Input } from '../common/Input';
 
-export function SetRow({ setNumber, weight, reps, rir, completed, onUpdate, previousSet }) {
+export function SetRow({ setNumber, weight, reps, rir, completed, onUpdate, previousSet, className: externalClassName }) {
     const rirOptions = [
         { val: -1, label: 'Fallé', color: 'bg-red-500' },
         { val: 0, label: '@0', color: 'bg-red-500' },
@@ -16,9 +16,9 @@ export function SetRow({ setNumber, weight, reps, rir, completed, onUpdate, prev
 
     return (
         <div className={cn(
-            "grid grid-cols-[20px_1fr_1fr_1fr_30px] gap-2 items-center py-2 border-b border-white/5 last:border-0",
-            completed && "opacity-50",
-            className
+            "grid grid-cols-[30px_1fr_1fr_1fr_40px] gap-2 items-center py-2 border-b border-white/5 last:border-0",
+            completed && "opacity-60",
+            externalClassName
         )}>
             <span className="text-xs text-gray-400 font-bold text-center">{setNumber}</span>
 

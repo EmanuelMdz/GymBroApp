@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useExercises } from '../../contexts/ExerciseContext';
 import { ExerciseCard } from './ExerciseCard';
 import { ExerciseForm } from './ExerciseForm';
 import { Input } from '../common/Input';
 import { Modal } from '../common/Modal';
 import { Button } from '../common/Button';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Globe, User } from 'lucide-react';
 import { MUSCLE_GROUPS } from '../../data/models';
 import { cn } from '../../utils/cn';
 
@@ -16,11 +16,19 @@ export function ExerciseList({ onSelect, selectedIds = [] }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingExercise, setEditingExercise] = useState(null);
 
-    const filteredExercises = exercises.filter(ex => {
-        const matchesSearch = ex.name.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesMuscle = filterMuscle === 'all' || ex.muscleGroup === filterMuscle;
-        return matchesSearch && matchesMuscle;
-    });
+    const filteredExercises = useMemo(() => {
+        return exercises.filter(ex => {
+            const matchesSearch = ex.name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesMuscle = filterMuscle === 'all' || ex.muscleGroup === filterMuscle;
+            return matchesSearch && matchesMuscle;
+        });
+    }, [exercises, searchTerm, filterMuscle]);
+
+    // Get unique muscle groups from exercises
+    const muscleGroups = useMemo(() => {
+        const groups = [...new Set(exercises.map(ex => ex.muscleGroup))].filter(Boolean);
+        return groups.sort();
+    }, [exercises]);
 
     const handleEdit = (exercise) => {
         setEditingExercise(exercise);
@@ -63,27 +71,29 @@ export function ExerciseList({ onSelect, selectedIds = [] }) {
                     className={cn(
                         "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border",
                         filterMuscle === 'all'
-                            ? "bg-text-primary text-background border-text-primary"
+                            ? "bg-brand-lime text-brand-dark border-brand-lime"
                             : "bg-surface text-text-secondary border-surface-light hover:border-text-secondary"
                     )}
                 >
-                    Todos
+                    Todos ({exercises.length})
                 </button>
-                {Object.entries(MUSCLE_GROUPS).map(([key, val]) => (
-                    <button
-                        key={key}
-                        onClick={() => setFilterMuscle(key)}
-                        className={cn(
-                            "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border",
-                            filterMuscle === key
-                                ? "text-white border-transparent"
-                                : "bg-surface text-text-secondary border-surface-light hover:border-text-secondary"
-                        )}
-                        style={filterMuscle === key ? { backgroundColor: val.color } : {}}
-                    >
-                        {val.label}
-                    </button>
-                ))}
+                {muscleGroups.map((group) => {
+                    const count = exercises.filter(ex => ex.muscleGroup === group).length;
+                    return (
+                        <button
+                            key={group}
+                            onClick={() => setFilterMuscle(group)}
+                            className={cn(
+                                "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors border",
+                                filterMuscle === group
+                                    ? "bg-brand-lime text-brand-dark border-brand-lime"
+                                    : "bg-surface text-text-secondary border-surface-light hover:border-text-secondary"
+                            )}
+                        >
+                            {group} ({count})
+                        </button>
+                    );
+                })}
             </div>
 
             <div className="space-y-2">

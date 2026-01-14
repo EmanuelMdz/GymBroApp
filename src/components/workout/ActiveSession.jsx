@@ -5,16 +5,27 @@ import { SetRow } from './SetRow';
 import { RestTimer } from './RestTimer';
 import { Button } from '../common/Button';
 import { Card } from '../common/Card';
-import { Clock, ChevronLeft, ChevronRight, Pause, Weight, Dumbbell, Play } from 'lucide-react';
-import { MUSCLE_GROUPS } from '../../data/models';
+import { Modal } from '../common/Modal';
+import { ChevronLeft, ChevronRight, Pause, Target, MessageSquare, Plus, Search } from 'lucide-react';
 import { cn } from '../../utils/cn';
+import { Input } from '../common/Input';
+
+const SET_TYPE_LABELS = {
+    normal: { label: 'Normal', color: 'bg-gray-500' },
+    strength: { label: 'Fuerza', color: 'bg-red-500' },
+    hypertrophy: { label: 'Hipertrofia', color: 'bg-blue-500' },
+    dropset: { label: 'Drop Set', color: 'bg-purple-500' },
+    amrap: { label: 'AMRAP', color: 'bg-orange-500' },
+};
 
 export function ActiveSession() {
-    const { activeSession, updateSessionSet, finishSession, cancelSession } = useWorkout();
-    const { getExerciseById } = useExercises();
+    const { activeSession, updateSessionSet, addSetToExercise, addExerciseToSession, finishSession, cancelSession } = useWorkout();
+    const { exercises, getExerciseById } = useExercises();
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
     const [showTimer, setShowTimer] = useState(true);
     const [elapsedTime, setElapsedTime] = useState(0);
+    const [showAddExercise, setShowAddExercise] = useState(false);
+    const [addToRoutinePrompt, setAddToRoutinePrompt] = useState(null);
 
     // Timer logic for total elapsed time
     useEffect(() => {
@@ -103,20 +114,36 @@ export function ActiveSession() {
                     <div className="relative z-20 w-full">
                         <div className="flex justify-between items-end mb-4">
                             <div>
-                                <span className="inline-block px-3 py-1 rounded-full bg-brand-lime text-brand-dark text-[10px] font-bold uppercase mb-2">
-                                    {currentExerciseDef?.muscleGroup || 'General'}
-                                </span>
+                                <div className="flex items-center gap-2 mb-2">
+                                    <span className="inline-block px-3 py-1 rounded-full bg-brand-lime text-brand-dark text-[10px] font-bold uppercase">
+                                        {currentExerciseDef?.muscleGroup || 'General'}
+                                    </span>
+                                    {currentExerciseSession.setType && currentExerciseSession.setType !== 'normal' && (
+                                        <span className={`inline-block px-3 py-1 rounded-full text-white text-[10px] font-bold uppercase ${SET_TYPE_LABELS[currentExerciseSession.setType]?.color || 'bg-gray-500'}`}>
+                                            {SET_TYPE_LABELS[currentExerciseSession.setType]?.label}
+                                        </span>
+                                    )}
+                                </div>
                                 <h2 className="text-3xl font-bold leading-tight max-w-[80%]">
                                     {currentExerciseDef?.name}
                                 </h2>
                             </div>
 
-                            {/* Floating Mini Stats */}
-                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 flex flex-col items-center gap-1 min-w-[60px]">
-                                <span className="text-[10px] text-gray-300 uppercase">Kcal</span>
-                                <span className="text-lg font-bold">328</span>
+                            {/* Target Reps Display */}
+                            <div className="bg-white/10 backdrop-blur-md rounded-2xl p-3 flex flex-col items-center gap-1 min-w-[70px]">
+                                <Target size={14} className="text-brand-lime" />
+                                <span className="text-lg font-bold">{currentExerciseSession.targetReps || '8-12'}</span>
+                                <span className="text-[10px] text-gray-300 uppercase">Reps</span>
                             </div>
                         </div>
+                        
+                        {/* Exercise Notes */}
+                        {currentExerciseSession.exerciseNotes && (
+                            <div className="bg-white/10 backdrop-blur-md rounded-xl p-2 flex items-center gap-2">
+                                <MessageSquare size={12} className="text-brand-lime flex-shrink-0" />
+                                <span className="text-xs text-gray-200">{currentExerciseSession.exerciseNotes}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -163,6 +190,15 @@ export function ActiveSession() {
                                 className={cn("py-3 rounded-2xl", set.completed ? "bg-brand-lime/10 border-brand-lime/20" : "bg-white/5")}
                             />
                         ))}
+                        
+                        {/* Add Set Button */}
+                        <button
+                            onClick={() => addSetToExercise(currentExerciseIndex)}
+                            className="w-full py-2 border border-dashed border-white/20 rounded-2xl text-xs text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-2"
+                        >
+                            <Plus size={14} />
+                            Agregar Serie
+                        </button>
                     </div>
 
                     {/* Navigation Controls */}
@@ -199,10 +235,108 @@ export function ActiveSession() {
                             <ChevronRight />
                         </Button>
                     </div>
+
+                    {/* Add Exercise Button */}
+                    <button
+                        onClick={() => setShowAddExercise(true)}
+                        className="w-full mt-4 py-3 border border-dashed border-white/20 rounded-2xl text-sm text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Plus size={16} />
+                        Agregar Ejercicio Extra
+                    </button>
                 </Card>
             </div>
 
             {showTimer && <RestTimer className="fixed bottom-32 left-1/2 -translate-x-1/2 shadow-2xl z-50 scale-90" />}
+
+            {/* Add Exercise Modal */}
+            <Modal
+                isOpen={showAddExercise}
+                onClose={() => setShowAddExercise(false)}
+                title="Agregar Ejercicio"
+            >
+                <AddExerciseSelector
+                    exercises={exercises}
+                    onSelect={(exerciseId) => {
+                        setShowAddExercise(false);
+                        setAddToRoutinePrompt(exerciseId);
+                    }}
+                    currentExerciseIds={activeSession.exercises.map(e => e.exerciseId)}
+                />
+            </Modal>
+
+            {/* Add to Routine Prompt */}
+            <Modal
+                isOpen={!!addToRoutinePrompt}
+                onClose={() => setAddToRoutinePrompt(null)}
+                title="¿Agregar a la rutina?"
+            >
+                <div className="space-y-4">
+                    <p className="text-gray-400">¿Querés agregar este ejercicio a tu rutina permanentemente?</p>
+                    <div className="flex gap-3">
+                        <Button
+                            className="flex-1"
+                            variant="secondary"
+                            onClick={async () => {
+                                await addExerciseToSession(addToRoutinePrompt, false);
+                                setAddToRoutinePrompt(null);
+                                setCurrentExerciseIndex(activeSession.exercises.length); // Go to new exercise
+                            }}
+                        >
+                            Solo hoy
+                        </Button>
+                        <Button
+                            className="flex-1 bg-brand-lime text-brand-dark"
+                            onClick={async () => {
+                                await addExerciseToSession(addToRoutinePrompt, true);
+                                setAddToRoutinePrompt(null);
+                                setCurrentExerciseIndex(activeSession.exercises.length);
+                            }}
+                        >
+                            Agregar a rutina
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
+        </div>
+    );
+}
+
+// Sub-component for exercise selection
+function AddExerciseSelector({ exercises, onSelect, currentExerciseIds }) {
+    const [search, setSearch] = useState('');
+    
+    const filtered = exercises.filter(ex => 
+        !currentExerciseIds.includes(ex.id) &&
+        ex.name.toLowerCase().includes(search.toLowerCase())
+    ).slice(0, 20);
+
+    return (
+        <div className="space-y-4">
+            <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                <Input
+                    placeholder="Buscar ejercicio..."
+                    className="pl-9"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                />
+            </div>
+            <div className="max-h-64 overflow-y-auto space-y-2">
+                {filtered.map(ex => (
+                    <button
+                        key={ex.id}
+                        onClick={() => onSelect(ex.id)}
+                        className="w-full p-3 bg-brand-gray/30 hover:bg-brand-gray/50 rounded-xl text-left transition-colors"
+                    >
+                        <span className="font-medium text-white">{ex.name}</span>
+                        <span className="text-xs text-gray-400 ml-2">{ex.muscleGroup}</span>
+                    </button>
+                ))}
+                {filtered.length === 0 && (
+                    <p className="text-center text-gray-500 py-4">No se encontraron ejercicios</p>
+                )}
+            </div>
         </div>
     );
 }

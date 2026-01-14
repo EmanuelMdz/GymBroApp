@@ -57,7 +57,9 @@ export function WorkoutProvider({ children }) {
                     exerciseId: ex.exercise_id,
                     targetSets: ex.target_sets,
                     targetReps: ex.target_reps,
-                    restSeconds: ex.rest_seconds
+                    restSeconds: ex.rest_seconds,
+                    setType: ex.set_type || 'normal',
+                    notes: ex.notes || ''
                 }))
             }));
             setRoutine(formattedRoutine);
@@ -163,6 +165,8 @@ export function WorkoutProvider({ children }) {
         if ('targetSets' in data) dbUpdates.target_sets = data.targetSets;
         if ('targetReps' in data) dbUpdates.target_reps = data.targetReps;
         if ('restSeconds' in data) dbUpdates.rest_seconds = data.restSeconds;
+        if ('setType' in data) dbUpdates.set_type = data.setType;
+        if ('notes' in data) dbUpdates.notes = data.notes;
 
         // Optimistic UI
         setRoutine(prev => prev.map(d => {
@@ -205,10 +209,16 @@ export function WorkoutProvider({ children }) {
             id: uuidv4(),
             date: Date.now(),
             dayOfWeek: dayRoutine.day_of_week || dayRoutine.dayOfWeek,
+            dayName: dayRoutine.name,
             workoutDayId: dayId,
             startTime: Date.now(),
             exercises: dayRoutine.exercises.map(ex => ({
                 exerciseId: ex.exerciseId,
+                targetSets: ex.targetSets,
+                targetReps: ex.targetReps,
+                restSeconds: ex.restSeconds,
+                setType: ex.setType || 'normal',
+                exerciseNotes: ex.notes || '',
                 sets: Array(ex.targetSets).fill(null).map((_, i) => ({
                     setNumber: i + 1,
                     weight: 0,
@@ -231,6 +241,63 @@ export function WorkoutProvider({ children }) {
             ...data
         };
         setActiveSession({ ...activeSession, exercises: updatedExercises });
+    };
+
+    const addSetToExercise = (exerciseIndex) => {
+        if (!activeSession) return;
+        const updatedExercises = [...activeSession.exercises];
+        const currentSets = updatedExercises[exerciseIndex].sets;
+        const newSetNumber = currentSets.length + 1;
+        
+        // Copy weight from last set if available
+        const lastSet = currentSets[currentSets.length - 1];
+        
+        updatedExercises[exerciseIndex].sets.push({
+            setNumber: newSetNumber,
+            weight: lastSet?.weight || 0,
+            reps: 0,
+            rir: 2,
+            completed: false
+        });
+        setActiveSession({ ...activeSession, exercises: updatedExercises });
+    };
+
+    const addExerciseToSession = async (exerciseId, addToRoutine = false) => {
+        if (!activeSession) return;
+        
+        // Get exercise details
+        const { data: exDef } = await supabase.from('exercises').select('*').eq('id', exerciseId).single();
+        if (!exDef) return;
+
+        const newExercise = {
+            exerciseId: exerciseId,
+            targetSets: 3,
+            targetReps: '8-12',
+            restSeconds: 90,
+            setType: 'normal',
+            exerciseNotes: '',
+            sets: [{
+                setNumber: 1,
+                weight: 0,
+                reps: 0,
+                rir: 2,
+                completed: false
+            }],
+            notes: '',
+            isExtra: true // Mark as added during session
+        };
+
+        setActiveSession({
+            ...activeSession,
+            exercises: [...activeSession.exercises, newExercise]
+        });
+
+        // Optionally add to the routine permanently
+        if (addToRoutine && activeSession.workoutDayId) {
+            await addExerciseToDay(activeSession.workoutDayId, exerciseId);
+        }
+
+        return newExercise;
     };
 
     const finishSession = async () => {
@@ -328,6 +395,8 @@ export function WorkoutProvider({ children }) {
         removeExerciseFromDay,
         startSession,
         updateSessionSet,
+        addSetToExercise,
+        addExerciseToSession,
         finishSession,
         cancelSession,
         getDayName

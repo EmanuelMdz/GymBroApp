@@ -23,28 +23,58 @@ export function ExerciseProvider({ children }) {
 
     const fetchExercises = async () => {
         setLoading(true);
+        // Fetch global exercises + user's custom exercises
         const { data, error } = await supabase
             .from('exercises')
             .select('*')
+            .or(`is_global.eq.true,user_id.eq.${user.id}`)
+            .order('muscle_group')
             .order('name');
 
-        if (error) console.error('Error fetching exercises:', error);
-        else setExercises(data || []);
+        if (error) {
+            console.error('Error fetching exercises:', error);
+        } else {
+            // Map snake_case to camelCase for UI
+            const mappedData = (data || []).map(ex => ({
+                ...ex,
+                muscleGroup: ex.muscle_group,
+                isGlobal: ex.is_global,
+                subcategory: ex.subcategory
+            }));
+            setExercises(mappedData);
+        }
         setLoading(false);
     };
 
     const addExercise = async (exercise) => {
-        // Optimistic update could be done here, but standard fetch is safer for consistent ID
+        // Map camelCase to snake_case for DB - user exercises are never global
+        const dbExercise = {
+            user_id: user.id,
+            name: exercise.name,
+            muscle_group: exercise.muscleGroup,
+            equipment: exercise.equipment,
+            subcategory: exercise.subcategory || null,
+            notes: exercise.notes || null,
+            is_global: false
+        };
+
         const { data, error } = await supabase
             .from('exercises')
-            .insert([{ ...exercise, user_id: user.id }])
+            .insert([dbExercise])
             .select()
             .single();
 
         if (error) {
             console.error('Error adding exercise:', error);
         } else {
-            setExercises(prev => [...prev, data]);
+            // Map back to camelCase for UI
+            const mappedData = {
+                ...data,
+                muscleGroup: data.muscle_group,
+                isGlobal: data.is_global,
+                subcategory: data.subcategory
+            };
+            setExercises(prev => [...prev, mappedData]);
         }
         return { data, error };
     };
@@ -53,14 +83,20 @@ export function ExerciseProvider({ children }) {
         // Optimistic update
         setExercises(prev => prev.map(ex => ex.id === id ? { ...ex, ...updatedData } : ex));
 
+        // Map camelCase to snake_case for DB
+        const dbUpdates = {};
+        if ('name' in updatedData) dbUpdates.name = updatedData.name;
+        if ('muscleGroup' in updatedData) dbUpdates.muscle_group = updatedData.muscleGroup;
+        if ('equipment' in updatedData) dbUpdates.equipment = updatedData.equipment;
+        if ('notes' in updatedData) dbUpdates.notes = updatedData.notes;
+
         const { error } = await supabase
             .from('exercises')
-            .update(updatedData)
+            .update(dbUpdates)
             .eq('id', id);
 
         if (error) {
             console.error('Error updating exercise:', error);
-            // Revert on error would be ideal
             fetchExercises();
         }
     };
