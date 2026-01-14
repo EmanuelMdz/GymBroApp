@@ -201,12 +201,33 @@ export function WorkoutProvider({ children }) {
 
     // --- Session Logic ---
 
-    const startSession = (dayId) => {
+    const startSession = async (dayId) => {
         const dayRoutine = routine.find(d => d.id === dayId);
         if (!dayRoutine) return;
 
+        // Create session in DB immediately
+        const sessionPayload = {
+            user_id: user.id,
+            workout_day_id: dayId,
+            date: new Date().toISOString(),
+            duration: 0,
+            general_notes: ''
+        };
+
+        const { data: dbSession, error } = await supabase
+            .from('workout_sessions')
+            .insert([sessionPayload])
+            .select()
+            .single();
+
+        if (error) {
+            console.error('Error creating session:', error);
+            return;
+        }
+
         const newSession = {
-            id: uuidv4(),
+            id: dbSession.id, // Use DB session ID
+            dbSessionId: dbSession.id,
             date: Date.now(),
             dayOfWeek: dayRoutine.day_of_week || dayRoutine.dayOfWeek,
             dayName: dayRoutine.name,
@@ -226,7 +247,8 @@ export function WorkoutProvider({ children }) {
                     rir: 2,
                     completed: false
                 })),
-                notes: ''
+                notes: '',
+                savedToDb: false // Track if saved
             })),
             generalNotes: ''
         };
@@ -241,6 +263,62 @@ export function WorkoutProvider({ children }) {
             ...data
         };
         setActiveSession({ ...activeSession, exercises: updatedExercises });
+    };
+
+    // Save a single exercise to DB (called when moving to next exercise)
+    const saveExerciseToDb = async (exerciseIndex) => {
+        if (!activeSession || !activeSession.dbSessionId) return;
+        
+        const ex = activeSession.exercises[exerciseIndex];
+        if (!ex || ex.savedToDb) return; // Already saved
+
+        // Get exercise name
+        const { data: exDef } = await supabase.from('exercises').select('name').eq('id', ex.exerciseId).single();
+        const exName = exDef?.name || 'Ejercicio';
+
+        // Create performed_exercise
+        const { data: perfEx, error: perfExError } = await supabase
+            .from('performed_exercises')
+            .insert([{
+                session_id: activeSession.dbSessionId,
+                exercise_id: ex.exerciseId,
+                exercise_name: exName,
+                notes: ex.notes || ex.exerciseNotes || ''
+            }])
+            .select()
+            .single();
+
+        if (perfExError) {
+            console.error('Error saving exercise:', perfExError);
+            return;
+        }
+
+        // Save all sets with data
+        const setsToSave = ex.sets
+            .filter(s => s.completed || (s.weight > 0 && s.reps > 0))
+            .map(s => ({
+                performed_exercise_id: perfEx.id,
+                set_number: s.setNumber,
+                weight: s.weight,
+                reps: s.reps,
+                rir: s.rir,
+                completed: s.completed
+            }));
+
+        if (setsToSave.length > 0) {
+            const { error: setsError } = await supabase.from('performed_sets').insert(setsToSave);
+            if (setsError) {
+                console.error('Error saving sets:', setsError);
+            }
+        }
+
+        // Mark as saved
+        const updatedExercises = [...activeSession.exercises];
+        updatedExercises[exerciseIndex].savedToDb = true;
+        updatedExercises[exerciseIndex].dbPerformedExerciseId = perfEx.id;
+        setActiveSession({ ...activeSession, exercises: updatedExercises });
+
+        console.log(`✅ Ejercicio guardado: ${exName}`);
     };
 
     const addSetToExercise = (exerciseIndex) => {
@@ -303,71 +381,22 @@ export function WorkoutProvider({ children }) {
     const finishSession = async () => {
         if (!activeSession) return;
 
-        // 1. Create Session in DB
-        const sessionPayload = {
-            user_id: user.id,
-            workout_day_id: activeSession.workoutDayId,
-            date: new Date(activeSession.date).toISOString(),
-            duration: Math.round((Date.now() - activeSession.startTime) / 60000),
-            general_notes: activeSession.generalNotes
-        };
-
-        const { data: sessionData, error: sessionError } = await supabase
-            .from('workout_sessions')
-            .insert([sessionPayload])
-            .select()
-            .single();
-
-        if (sessionError) {
-            console.error('Error saving session:', sessionError);
-            return;
+        // Save any unsaved exercises first
+        for (let i = 0; i < activeSession.exercises.length; i++) {
+            if (!activeSession.exercises[i].savedToDb) {
+                await saveExerciseToDb(i);
+            }
         }
 
-        const sessionId = sessionData.id;
-
-        // 2. Create Performed Exercises and Sets
-        for (const ex of activeSession.exercises) {
-            // Need exercise name snapshot
-            // Fetch name locally since we have it in memory or Context? 
-            // We only have ID. 'exercises' context has names. 
-            // But we are in WorkoutContext. We can fetch or just pass it.
-            // Simplified: use "Unknown" if missing, or better, query join?
-            // Actually, we should probably fetch name from DB or pass it. 
-            // For now, let's assume we can get it from a cache or the user just sees "Exercise".
-            // Ideally we need the name.
-
-            // Let's use a placeholder and rely on relation for display, but DB req snapshot.
-            // We can fetch singular.
-            const { data: exDef } = await supabase.from('exercises').select('name').eq('id', ex.exerciseId).single();
-            const exName = exDef?.name || 'Unknown Exercise';
-
-            const { data: perfEx, error: perfExError } = await supabase
-                .from('performed_exercises')
-                .insert([{
-                    session_id: sessionId,
-                    exercise_id: ex.exerciseId,
-                    exercise_name: exName,
-                    notes: ex.notes
-                }])
-                .select()
-                .single();
-
-            if (!perfExError) {
-                const setsPayload = ex.sets
-                    .filter(s => s.completed || (s.weight > 0 && s.reps > 0)) // Only save meaningful sets
-                    .map(s => ({
-                        performed_exercise_id: perfEx.id,
-                        set_number: s.setNumber,
-                        weight: s.weight,
-                        reps: s.reps,
-                        rir: s.rir,
-                        completed: s.completed
-                    }));
-
-                if (setsPayload.length > 0) {
-                    await supabase.from('performed_sets').insert(setsPayload);
-                }
-            }
+        // Update session duration
+        if (activeSession.dbSessionId) {
+            await supabase
+                .from('workout_sessions')
+                .update({
+                    duration: Math.round((Date.now() - activeSession.startTime) / 60000),
+                    general_notes: activeSession.generalNotes
+                })
+                .eq('id', activeSession.dbSessionId);
         }
 
         // Refresh History
@@ -397,6 +426,7 @@ export function WorkoutProvider({ children }) {
         updateSessionSet,
         addSetToExercise,
         addExerciseToSession,
+        saveExerciseToDb,
         finishSession,
         cancelSession,
         getDayName

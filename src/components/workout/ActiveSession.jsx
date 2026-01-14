@@ -19,7 +19,7 @@ const SET_TYPE_LABELS = {
 };
 
 export function ActiveSession() {
-    const { activeSession, updateSessionSet, addSetToExercise, addExerciseToSession, finishSession, cancelSession } = useWorkout();
+    const { activeSession, updateSessionSet, addSetToExercise, addExerciseToSession, saveExerciseToDb, finishSession, cancelSession } = useWorkout();
     const { exercises, getExerciseById } = useExercises();
     const [currentExerciseIndex, setCurrentExerciseIndex] = useState(0);
     const [showTimer, setShowTimer] = useState(true);
@@ -72,7 +72,10 @@ export function ActiveSession() {
         }
     };
 
-    const nextExercise = () => {
+    const nextExercise = async () => {
+        // Save current exercise before moving to next
+        await saveExerciseToDb(currentExerciseIndex);
+        
         if (currentExerciseIndex < activeSession.exercises.length - 1) {
             setCurrentExerciseIndex(prev => prev + 1);
         }
@@ -247,7 +250,7 @@ export function ActiveSession() {
                 </Card>
             </div>
 
-            {showTimer && <RestTimer className="fixed bottom-32 left-1/2 -translate-x-1/2 shadow-2xl z-50 scale-90" />}
+            {showTimer && <RestTimer className="fixed bottom-24 left-4 right-4 z-40" />}
 
             {/* Add Exercise Modal */}
             <Modal

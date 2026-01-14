@@ -36,7 +36,7 @@ export function RestTimer({ initialTime = 90, className }) {
 
 
     return (
-        <div className={`bg-surface border-t border-surface-light p-4 flex items-center justify-between sticky bottom-16 left-0 right-0 z-30 shadow-lg ${className || ''}`}>
+        <div className={`bg-brand-card border border-white/10 p-3 rounded-2xl flex items-center justify-between shadow-2xl ${className || ''}`}>
             <div className="flex items-center space-x-4">
                 <div className="text-2xl font-mono font-bold w-16 text-center">{formatTime(timeLeft)}</div>
                 <div className="flex space-x-2">

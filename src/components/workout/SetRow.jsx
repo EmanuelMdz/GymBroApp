@@ -27,9 +27,9 @@ export function SetRow({ setNumber, weight, reps, rir, completed, onUpdate, prev
                     className="h-8 text-center text-sm p-1 bg-white/5 border-white/10 text-white rounded-md focus:border-brand-lime focus:ring-1 focus:ring-brand-lime"
                     type="number"
                     step="0.5"
-                    value={weight}
-                    onChange={(e) => onUpdate({ weight: parseFloat(e.target.value) || 0 })}
-                    placeholder={previousSet ? previousSet.weight : '-'}
+                    value={weight === 0 ? '' : weight}
+                    onChange={(e) => onUpdate({ weight: e.target.value === '' ? 0 : parseFloat(e.target.value) })}
+                    placeholder={previousSet ? String(previousSet.weight) : '0'}
                 />
                 <span className="absolute right-1 top-1.5 text-[10px] text-gray-500">kg</span>
             </div>
@@ -38,9 +38,9 @@ export function SetRow({ setNumber, weight, reps, rir, completed, onUpdate, prev
                 <Input
                     className="h-8 text-center text-sm p-1 bg-white/5 border-white/10 text-white rounded-md focus:border-brand-lime focus:ring-1 focus:ring-brand-lime"
                     type="number"
-                    value={reps}
-                    onChange={(e) => onUpdate({ reps: parseInt(e.target.value) || 0 })}
-                    placeholder={previousSet ? previousSet.reps : '-'}
+                    value={reps === 0 ? '' : reps}
+                    onChange={(e) => onUpdate({ reps: e.target.value === '' ? 0 : parseInt(e.target.value) })}
+                    placeholder={previousSet ? String(previousSet.reps) : '0'}
                 />
                 <span className="absolute right-1 top-1.5 text-[10px] text-gray-500">reps</span>
             </div>
