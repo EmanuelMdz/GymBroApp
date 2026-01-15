@@ -107,7 +107,7 @@ export default function Session() {
     const totalProgress = getTotalProgress();
 
     return (
-        <div className="min-h-screen pb-32">
+        <div className="min-h-screen pb-40">
             {/* Header */}
             <div className="sticky top-0 z-30 bg-brand-dark/95 backdrop-blur-sm pb-4">
                 <div className="flex items-center justify-between mb-4">
@@ -126,39 +126,31 @@ export default function Session() {
                     </button>
                 </div>
 
-                {/* Session Info */}
-                <div className="bg-brand-card rounded-2xl p-4 border border-white/5">
-                    <div className="flex justify-between items-start mb-3">
-                        <div>
-                            <p className="text-xs text-brand-lime font-medium uppercase tracking-wider">En curso</p>
-                            <h1 className="text-xl font-bold text-white">{activeSession.dayName}</h1>
+                {/* Session Info - Compact */}
+                <div className="bg-brand-card rounded-xl p-3 border border-white/5">
+                    <div className="flex justify-between items-center">
+                        <div className="flex-1 min-w-0">
+                            <p className="text-[10px] text-brand-lime font-medium uppercase">En curso</p>
+                            <h1 className="text-base font-bold text-white truncate">{activeSession.dayName}</h1>
                         </div>
-                        <div className="text-right">
-                            <div className="flex items-center gap-1 text-white">
-                                <Clock size={16} className="text-brand-lime" />
-                                <span className="font-mono text-lg font-bold">{formatTime(elapsedTime)}</span>
+                        <div className="flex items-center gap-3">
+                            <div className="text-right">
+                                <div className="flex items-center gap-1 text-white">
+                                    <Clock size={14} className="text-brand-lime" />
+                                    <span className="font-mono text-base font-bold">{formatTime(elapsedTime)}</span>
+                                </div>
+                                <p className="text-[10px] text-gray-400">{totalProgress.completed}/{totalProgress.total} series</p>
                             </div>
-                        </div>
-                    </div>
-                    
-                    {/* Progress Bar */}
-                    <div className="space-y-1">
-                        <div className="flex justify-between text-xs">
-                            <span className="text-gray-400">Progreso</span>
-                            <span className="text-white font-medium">{totalProgress.completed}/{totalProgress.total} series</span>
-                        </div>
-                        <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                            <div 
-                                className="h-full bg-brand-lime rounded-full transition-all duration-300"
-                                style={{ width: `${totalProgress.percent}%` }}
-                            />
+                            <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
+                                <span className="text-xs font-bold text-brand-lime">{Math.round(totalProgress.percent)}%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
             {/* Exercise List */}
-            <div className="space-y-3 mt-4">
+            <div className="space-y-2 mt-3">
                 {activeSession.exercises.map((exercise, exIndex) => {
                     const exDef = getExerciseById(exercise.exerciseId);
                     const progress = getExerciseProgress(exercise);
@@ -168,51 +160,50 @@ export default function Session() {
                     return (
                         <div 
                             key={exIndex}
-                            className={`bg-brand-card rounded-2xl border transition-all duration-200 ${
+                            className={`bg-brand-card rounded-xl border transition-all duration-200 ${
                                 isExpanded ? 'border-brand-lime/50' : 'border-white/5'
-                            } ${isComplete ? 'opacity-60' : ''}`}
+                            } ${isComplete ? 'opacity-50' : ''}`}
                         >
                             {/* Exercise Header - Clickable */}
                             <button
                                 onClick={() => toggleExercise(exIndex)}
-                                className="w-full p-4 flex items-center justify-between text-left"
+                                className="w-full p-3 flex items-center justify-between text-left"
                             >
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
                                         isComplete ? 'bg-green-500/20' : 'bg-brand-lime/20'
                                     }`}>
                                         {isComplete ? (
-                                            <CheckCircle2 size={20} className="text-green-500" />
+                                            <CheckCircle2 size={16} className="text-green-500" />
                                         ) : (
-                                            <span className="text-brand-lime font-bold text-sm">{exIndex + 1}</span>
+                                            <span className="text-brand-lime font-bold text-xs">{exIndex + 1}</span>
                                         )}
                                     </div>
                                     <div className="min-w-0 flex-1">
-                                        <h3 className="font-semibold text-white truncate">{exDef?.name || 'Ejercicio'}</h3>
-                                        <p className="text-xs text-gray-400">
+                                        <h3 className="font-medium text-white text-sm truncate">{exDef?.name || 'Ejercicio'}</h3>
+                                        <p className="text-[11px] text-gray-400">
                                             {progress.completed}/{progress.total} series • {exercise.targetReps} reps
                                         </p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {/* Mini progress */}
-                                    <div className="w-12 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                                    <div className="w-10 h-1 bg-white/10 rounded-full overflow-hidden">
                                         <div 
                                             className={`h-full rounded-full ${isComplete ? 'bg-green-500' : 'bg-brand-lime'}`}
                                             style={{ width: `${progress.percent}%` }}
                                         />
                                     </div>
                                     {isExpanded ? (
-                                        <ChevronUp size={20} className="text-gray-400" />
+                                        <ChevronUp size={18} className="text-gray-400" />
                                     ) : (
-                                        <ChevronDown size={20} className="text-gray-400" />
+                                        <ChevronDown size={18} className="text-gray-400" />
                                     )}
                                 </div>
                             </button>
 
                             {/* Expanded Content */}
                             {isExpanded && (
-                                <div className="px-4 pb-4 space-y-3 border-t border-white/5 pt-3">
+                                <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
                                     {/* Notes if any */}
                                     {exercise.exerciseNotes && (
                                         <p className="text-xs text-brand-lime bg-brand-lime/10 px-3 py-2 rounded-lg">
@@ -321,18 +312,18 @@ export default function Session() {
                         setSearchTerm('');
                         setShowAddModal(true);
                     }}
-                    className="w-full p-4 border-2 border-dashed border-white/10 rounded-2xl text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-2"
+                    className="w-full p-3 border border-dashed border-white/10 rounded-xl text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                    <Plus size={20} />
+                    <Plus size={16} />
                     Agregar Ejercicio
                 </button>
             </div>
 
             {/* Finish Button - Fixed at bottom */}
-            <div className="fixed bottom-20 left-4 right-4 z-40">
+            <div className="fixed bottom-24 left-4 right-4 z-40">
                 <Button
-                    onClick={handleFinish}
-                    className="w-full h-14 bg-brand-lime text-brand-dark hover:bg-brand-lime/90 rounded-2xl text-base font-bold shadow-lg"
+                    onClick={() => setShowFinishConfirm(true)}
+                    className="w-full h-12 bg-brand-lime text-brand-dark hover:bg-brand-lime/90 rounded-xl text-sm font-bold shadow-lg"
                 >
                     Finalizar Entrenamiento
                 </Button>
@@ -418,23 +409,33 @@ export default function Session() {
             <Modal
                 isOpen={showFinishConfirm}
                 onClose={() => setShowFinishConfirm(false)}
-                title="¿Cancelar entrenamiento?"
+                title="Opciones de entrenamiento"
             >
                 <div className="space-y-4">
-                    <p className="text-gray-400">¿Qué querés hacer con este entrenamiento?</p>
+                    <p className="text-gray-400 text-sm">¿Qué querés hacer?</p>
                     <div className="space-y-2">
                         <Button
                             onClick={handleFinish}
-                            className="w-full bg-brand-lime text-brand-dark"
+                            className="w-full bg-brand-lime text-brand-dark h-12"
                         >
-                            Guardar y Finalizar
+                            ✓ Guardar y Finalizar
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                setShowFinishConfirm(false);
+                                navigate('/');
+                            }}
+                            variant="secondary"
+                            className="w-full h-12"
+                        >
+                            ⏸ Pausar (volver al inicio)
                         </Button>
                         <Button
                             onClick={handleCancel}
                             variant="secondary"
-                            className="w-full text-red-400 border-red-400/30 hover:bg-red-400/10"
+                            className="w-full text-red-400 border-red-400/30 hover:bg-red-400/10 h-12"
                         >
-                            Descartar Entrenamiento
+                            ✕ Descartar y Empezar de Nuevo
                         </Button>
                         <Button
                             onClick={() => setShowFinishConfirm(false)}

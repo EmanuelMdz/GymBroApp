@@ -21,8 +21,6 @@ export function DayConfig({ day, onClose }) {
     const [expandedExercise, setExpandedExercise] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const repOptions = useMemo(() => Array.from({ length: 30 }, (_, i) => i + 1), []);
-
     const parseRepRange = (value) => {
         if (!value || typeof value !== 'string') return { min: 8, max: 12 };
         const match = value.match(/(\d{1,2})\s*-\s*(\d{1,2})/);
