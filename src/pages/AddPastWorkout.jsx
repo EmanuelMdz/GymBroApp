@@ -15,7 +15,10 @@ import {
     ChevronLeft, 
     Search, 
     Check,
-    Dumbbell
+    Dumbbell,
+    ChevronDown,
+    ChevronUp,
+    RefreshCw
 } from 'lucide-react';
 
 export default function AddPastWorkout() {
@@ -27,14 +30,13 @@ export default function AddPastWorkout() {
     const [selectedDayId, setSelectedDayId] = useState('');
     const [workoutExercises, setWorkoutExercises] = useState([]);
     const [showExerciseModal, setShowExerciseModal] = useState(false);
+    const [showReplaceModal, setShowReplaceModal] = useState(null); // index of exercise to replace
     const [searchTerm, setSearchTerm] = useState('');
     const [saving, setSaving] = useState(false);
+    const [expandedExercise, setExpandedExercise] = useState(null);
 
     // Filter days that have exercises
     const activeDays = routine.filter(d => d.exercises && d.exercises.length > 0);
-    
-    console.log('Routine:', routine);
-    console.log('Active days:', activeDays);
 
     const filteredExercises = exercises.filter(ex =>
         ex.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -68,10 +70,29 @@ export default function AddPastWorkout() {
         }]);
         setShowExerciseModal(false);
         setSearchTerm('');
+        // Expand the new exercise
+        setExpandedExercise(workoutExercises.length);
+    };
+
+    const replaceExercise = (index, exercise) => {
+        const updated = [...workoutExercises];
+        updated[index] = {
+            ...updated[index],
+            exerciseId: exercise.id,
+            exerciseName: exercise.name
+        };
+        setWorkoutExercises(updated);
+        setShowReplaceModal(null);
+        setSearchTerm('');
     };
 
     const removeExercise = (index) => {
         setWorkoutExercises(workoutExercises.filter((_, i) => i !== index));
+        if (expandedExercise === index) setExpandedExercise(null);
+    };
+
+    const toggleExercise = (index) => {
+        setExpandedExercise(expandedExercise === index ? null : index);
     };
 
     const addSet = (exIndex) => {
@@ -149,97 +170,153 @@ export default function AddPastWorkout() {
             </Card>
 
             {/* Exercises */}
-            <div className="space-y-3">
+            <div className="space-y-2">
                 <div className="flex justify-between items-center">
                     <h2 className="text-sm font-bold text-white uppercase">Ejercicios</h2>
                     {workoutExercises.length > 0 && (
-                        <span className="text-xs text-gray-400">Vol: {totalVolume.toLocaleString()} kg</span>
+                        <span className="text-xs text-brand-lime font-medium">Vol: {totalVolume.toLocaleString()} kg</span>
                     )}
                 </div>
 
-                {workoutExercises.map((ex, exIndex) => (
-                    <Card key={exIndex} className="bg-brand-card border-white/5 p-3">
-                        <div className="flex justify-between items-center mb-3">
-                            <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-lg bg-brand-lime/20 flex items-center justify-center">
-                                    <span className="text-brand-lime font-bold text-sm">{exIndex + 1}</span>
-                                </div>
-                                <span className="font-medium text-white text-sm">{ex.exerciseName}</span>
-                            </div>
-                            <button 
-                                onClick={() => removeExercise(exIndex)}
-                                className="text-red-400 hover:text-red-300 p-1"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-
-                        {/* Sets Header */}
-                        <div className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 text-[10px] text-gray-500 uppercase mb-1 px-1">
-                            <span>#</span>
-                            <span>Kg</span>
-                            <span>Reps</span>
-                            <span>RIR</span>
-                            <span></span>
-                        </div>
-
-                        {/* Sets */}
-                        {ex.sets.map((set, setIndex) => (
-                            <div key={setIndex} className="grid grid-cols-[30px_1fr_1fr_1fr_30px] gap-2 items-center mb-2">
-                                <span className="text-xs text-gray-500 text-center">{setIndex + 1}</span>
-                                <input
-                                    type="number"
-                                    step="0.5"
-                                    value={set.weight || ''}
-                                    onChange={(e) => updateSet(exIndex, setIndex, 'weight', parseFloat(e.target.value) || 0)}
-                                    placeholder="0"
-                                    className="h-9 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
-                                />
-                                <input
-                                    type="number"
-                                    value={set.reps || ''}
-                                    onChange={(e) => updateSet(exIndex, setIndex, 'reps', parseInt(e.target.value) || 0)}
-                                    placeholder="0"
-                                    className="h-9 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
-                                />
-                                <select
-                                    value={set.rir}
-                                    onChange={(e) => updateSet(exIndex, setIndex, 'rir', parseInt(e.target.value))}
-                                    className="h-9 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none appearance-none"
-                                >
-                                    <option value={-1}>F</option>
-                                    <option value={0}>0</option>
-                                    <option value={1}>1</option>
-                                    <option value={2}>2</option>
-                                    <option value={3}>3</option>
-                                    <option value={4}>4+</option>
-                                </select>
-                                <button
-                                    onClick={() => removeSet(exIndex, setIndex)}
-                                    className="h-9 w-9 flex items-center justify-center text-gray-500 hover:text-red-400"
-                                    disabled={ex.sets.length <= 1}
-                                >
-                                    <Trash2 size={14} />
-                                </button>
-                            </div>
-                        ))}
-
-                        <button
-                            onClick={() => addSet(exIndex)}
-                            className="w-full py-2 border border-dashed border-white/20 rounded-lg text-xs text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-1"
+                {workoutExercises.map((ex, exIndex) => {
+                    const isExpanded = expandedExercise === exIndex;
+                    const exVolume = ex.sets.reduce((acc, s) => acc + ((s.weight || 0) * (s.reps || 0)), 0);
+                    
+                    return (
+                        <div 
+                            key={exIndex}
+                            className={`bg-brand-card rounded-xl border transition-all ${
+                                isExpanded ? 'border-brand-lime/50' : 'border-white/5'
+                            }`}
                         >
-                            <Plus size={12} />
-                            Serie
-                        </button>
-                    </Card>
-                ))}
+                            {/* Exercise Header - Clickable */}
+                            <button
+                                onClick={() => toggleExercise(exIndex)}
+                                className="w-full p-3 flex items-center justify-between text-left"
+                            >
+                                <div className="flex items-center gap-2 flex-1 min-w-0">
+                                    <div className="w-8 h-8 rounded-lg bg-brand-lime/20 flex items-center justify-center flex-shrink-0">
+                                        <span className="text-brand-lime font-bold text-xs">{exIndex + 1}</span>
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="font-medium text-white text-sm truncate">{ex.exerciseName}</h3>
+                                        <p className="text-[11px] text-gray-400">
+                                            {ex.sets.length} series • {exVolume > 0 ? `${exVolume} kg` : 'Sin datos'}
+                                        </p>
+                                    </div>
+                                </div>
+                                {isExpanded ? (
+                                    <ChevronUp size={18} className="text-gray-400" />
+                                ) : (
+                                    <ChevronDown size={18} className="text-gray-400" />
+                                )}
+                            </button>
+
+                            {/* Expanded Content */}
+                            {isExpanded && (
+                                <div className="px-3 pb-3 space-y-2 border-t border-white/5 pt-2">
+                                    {/* Sets Header */}
+                                    <div className="grid grid-cols-[40px_1fr_1fr_1fr_40px] gap-2 text-xs text-gray-500 px-1">
+                                        <span>#</span>
+                                        <span>Kg</span>
+                                        <span>Reps</span>
+                                        <span>RIR</span>
+                                        <span></span>
+                                    </div>
+
+                                    {/* Sets */}
+                                    {ex.sets.map((set, setIndex) => (
+                                        <div 
+                                            key={setIndex}
+                                            className="grid grid-cols-[40px_1fr_1fr_1fr_40px] gap-2 items-center p-2 rounded-xl bg-white/5"
+                                        >
+                                            <span className="text-sm font-bold text-gray-400 text-center">{setIndex + 1}</span>
+                                            
+                                            <input
+                                                type="number"
+                                                step="0.5"
+                                                value={set.weight === 0 ? '' : set.weight}
+                                                onChange={(e) => updateSet(exIndex, setIndex, 'weight', e.target.value === '' ? 0 : parseFloat(e.target.value))}
+                                                placeholder="0"
+                                                className="h-9 w-full text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                            />
+                                            
+                                            <input
+                                                type="number"
+                                                value={set.reps === 0 ? '' : set.reps}
+                                                onChange={(e) => updateSet(exIndex, setIndex, 'reps', e.target.value === '' ? 0 : parseInt(e.target.value))}
+                                                placeholder="0"
+                                                className="h-9 w-full text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                            />
+                                            
+                                            <select
+                                                value={set.rir}
+                                                onChange={(e) => updateSet(exIndex, setIndex, 'rir', parseInt(e.target.value))}
+                                                className="h-9 w-full text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none appearance-none cursor-pointer"
+                                            >
+                                                <option value={-1} className="bg-brand-dark">Fallo</option>
+                                                <option value={0} className="bg-brand-dark">@0</option>
+                                                <option value={1} className="bg-brand-dark">@1</option>
+                                                <option value={2} className="bg-brand-dark">@2</option>
+                                                <option value={3} className="bg-brand-dark">@3</option>
+                                                <option value={4} className="bg-brand-dark">@4+</option>
+                                            </select>
+                                            
+                                            <button
+                                                onClick={() => removeSet(exIndex, setIndex)}
+                                                disabled={ex.sets.length <= 1}
+                                                className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${
+                                                    ex.sets.length <= 1 
+                                                        ? 'text-gray-600 cursor-not-allowed' 
+                                                        : 'text-gray-400 hover:bg-red-500/20 hover:text-red-400'
+                                                }`}
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+                                    ))}
+
+                                    {/* Actions */}
+                                    <div className="flex gap-2 pt-2">
+                                        <button
+                                            onClick={() => addSet(exIndex)}
+                                            className="flex-1 py-2 border border-dashed border-white/20 rounded-xl text-xs text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-1"
+                                        >
+                                            <Plus size={14} />
+                                            Serie
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setSearchTerm('');
+                                                setShowReplaceModal(exIndex);
+                                            }}
+                                            className="flex-1 py-2 border border-dashed border-white/20 rounded-xl text-xs text-gray-400 hover:border-orange-400 hover:text-orange-400 transition-colors flex items-center justify-center gap-1"
+                                        >
+                                            <RefreshCw size={14} />
+                                            Cambiar
+                                        </button>
+                                        <button
+                                            onClick={() => removeExercise(exIndex)}
+                                            className="py-2 px-3 border border-dashed border-red-500/30 rounded-xl text-xs text-red-400 hover:border-red-400 hover:bg-red-500/10 transition-colors flex items-center justify-center"
+                                        >
+                                            <Trash2 size={14} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    );
+                })}
 
                 {/* Add Exercise Button */}
                 <button
-                    onClick={() => setShowExerciseModal(true)}
-                    className="w-full p-4 border-2 border-dashed border-white/10 rounded-xl text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-2"
+                    onClick={() => {
+                        setSearchTerm('');
+                        setShowExerciseModal(true);
+                    }}
+                    className="w-full p-3 border border-dashed border-white/10 rounded-xl text-gray-400 hover:border-brand-lime hover:text-brand-lime transition-colors flex items-center justify-center gap-2 text-sm"
                 >
-                    <Plus size={20} />
+                    <Plus size={16} />
                     Agregar Ejercicio
                 </button>
             </div>
@@ -281,6 +358,40 @@ export default function AddPastWorkout() {
                                 className="w-full p-3 bg-brand-gray/30 hover:bg-brand-gray/50 rounded-xl text-left transition-colors flex items-center gap-3"
                             >
                                 <Dumbbell size={16} className="text-brand-lime" />
+                                <div>
+                                    <span className="font-medium text-white text-sm">{ex.name}</span>
+                                    <span className="text-xs text-gray-400 ml-2">{ex.muscleGroup}</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </Modal>
+
+            {/* Replace Exercise Modal */}
+            <Modal
+                isOpen={showReplaceModal !== null}
+                onClose={() => setShowReplaceModal(null)}
+                title="Cambiar Ejercicio"
+            >
+                <div className="space-y-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <Input
+                            placeholder="Buscar ejercicio..."
+                            className="pl-9"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                        {filteredExercises.map(ex => (
+                            <button
+                                key={ex.id}
+                                onClick={() => replaceExercise(showReplaceModal, ex)}
+                                className="w-full p-3 bg-brand-gray/30 hover:bg-brand-gray/50 rounded-xl text-left transition-colors flex items-center gap-3"
+                            >
+                                <Dumbbell size={16} className="text-orange-400" />
                                 <div>
                                     <span className="font-medium text-white text-sm">{ex.name}</span>
                                     <span className="text-xs text-gray-400 ml-2">{ex.muscleGroup}</span>
