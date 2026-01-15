@@ -191,7 +191,7 @@ export default function Stats() {
                     Volumen por Sesión
                 </h3>
                 <div className="h-40">
-                    {volumeChartData.length > 1 ? (
+                    {volumeChartData.length >= 1 ? (
                         <ResponsiveContainer width="100%" height="100%">
                             <BarChart data={volumeChartData}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
@@ -383,7 +383,7 @@ export default function Stats() {
                         <div>
                             <h4 className="text-sm font-bold text-white mb-2">Peso Máximo</h4>
                             <div className="h-40 bg-brand-dark/50 rounded-xl p-2">
-                                {prDetailData.exerciseHistory.length > 1 ? (
+                                {prDetailData.exerciseHistory.length >= 1 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <LineChart data={prDetailData.exerciseHistory}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#333" />
@@ -408,7 +408,7 @@ export default function Stats() {
                         <div>
                             <h4 className="text-sm font-bold text-white mb-2">Volumen por Sesión</h4>
                             <div className="h-40 bg-brand-dark/50 rounded-xl p-2">
-                                {prDetailData.exerciseHistory.length > 1 ? (
+                                {prDetailData.exerciseHistory.length >= 1 ? (
                                     <ResponsiveContainer width="100%" height="100%">
                                         <BarChart data={prDetailData.exerciseHistory}>
                                             <CartesianGrid strokeDasharray="3 3" stroke="#333" vertical={false} />
