@@ -155,15 +155,18 @@ export function DayConfig({ day, onClose }) {
                                                 />
                                             </div>
                                             <div>
-                                                <label className="text-[10px] text-gray-500 uppercase block mb-1">Reps</label>
+                                                <label className="text-[10px] text-gray-500 uppercase block mb-1">Reps (min-max)</label>
                                                 {(() => {
                                                     const range = parseRepRange(dayExercise.targetReps);
                                                     return (
-                                                        <div className="grid grid-cols-2 gap-1">
-                                                            <select
+                                                        <div className="flex items-center gap-1">
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max="30"
                                                                 value={range.min}
                                                                 onChange={(e) => {
-                                                                    const newMin = parseInt(e.target.value, 10);
+                                                                    const newMin = Math.max(1, Math.min(30, parseInt(e.target.value) || 1));
                                                                     const fixedMax = Math.max(newMin, range.max);
                                                                     const targetReps = `${newMin}-${fixedMax}`;
                                                                     const next = { targetReps };
@@ -172,16 +175,16 @@ export function DayConfig({ day, onClose }) {
                                                                     }
                                                                     updateDayExercise(day.id, index, next);
                                                                 }}
-                                                                className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none appearance-none"
-                                                            >
-                                                                {repOptions.map(n => (
-                                                                    <option key={`min-${n}`} value={n} className="bg-brand-card text-white">{n}</option>
-                                                                ))}
-                                                            </select>
-                                                            <select
+                                                                className="w-12 h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                                            />
+                                                            <span className="text-gray-500">-</span>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max="30"
                                                                 value={range.max}
                                                                 onChange={(e) => {
-                                                                    const newMax = parseInt(e.target.value, 10);
+                                                                    const newMax = Math.max(1, Math.min(30, parseInt(e.target.value) || 1));
                                                                     const fixedMin = Math.min(range.min, newMax);
                                                                     const targetReps = `${fixedMin}-${newMax}`;
                                                                     const next = { targetReps };
@@ -190,12 +193,8 @@ export function DayConfig({ day, onClose }) {
                                                                     }
                                                                     updateDayExercise(day.id, index, next);
                                                                 }}
-                                                                className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none appearance-none"
-                                                            >
-                                                                {repOptions.map(n => (
-                                                                    <option key={`max-${n}`} value={n} className="bg-brand-card text-white">{n}</option>
-                                                                ))}
-                                                            </select>
+                                                                className="w-12 h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                                            />
                                                         </div>
                                                     );
                                                 })()}
