@@ -378,6 +378,19 @@ export function WorkoutProvider({ children }) {
         return newExercise;
     };
 
+    const replaceExerciseInSession = (exerciseIndex, newExerciseId) => {
+        if (!activeSession || exerciseIndex < 0 || exerciseIndex >= activeSession.exercises.length) return;
+        
+        const updatedExercises = [...activeSession.exercises];
+        updatedExercises[exerciseIndex] = {
+            ...updatedExercises[exerciseIndex],
+            exerciseId: newExerciseId,
+            savedToDb: false // Reset so it saves with new exercise
+        };
+        
+        setActiveSession({ ...activeSession, exercises: updatedExercises });
+    };
+
     const finishSession = async () => {
         if (!activeSession) return;
 
@@ -426,6 +439,7 @@ export function WorkoutProvider({ children }) {
         updateSessionSet,
         addSetToExercise,
         addExerciseToSession,
+        replaceExerciseInSession,
         saveExerciseToDb,
         finishSession,
         cancelSession,

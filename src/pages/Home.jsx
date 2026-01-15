@@ -1,13 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { useWorkout } from '../contexts/WorkoutContext';
 import { useExercises } from '../contexts/ExerciseContext';
-import { ActiveSession } from '../components/workout/ActiveSession';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { DataManagement } from '../components/common/DataManagement';
 import { Modal } from '../components/common/Modal';
 import { useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Dumbbell, TrendingUp, Calendar, Trophy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Dumbbell, TrendingUp, Calendar, Trophy, Play, Clock } from 'lucide-react';
 import { format, startOfWeek, addDays, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -57,12 +56,44 @@ export default function Home() {
         };
     }, [history]);
 
-    if (activeSession) {
-        return <ActiveSession />;
-    }
+    // Format elapsed time for active session
+    const formatElapsedTime = () => {
+        if (!activeSession) return '00:00';
+        const elapsed = Math.floor((Date.now() - activeSession.startTime) / 1000);
+        const mins = Math.floor(elapsed / 60);
+        const secs = elapsed % 60;
+        return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    };
 
     return (
         <div className="space-y-6 pb-24">
+            {/* Active Session Banner */}
+            {activeSession && (
+                <Card 
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 border-none text-white p-4 cursor-pointer animate-pulse-slow"
+                    onClick={() => navigate('/session')}
+                >
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center">
+                                <Play size={24} className="text-white ml-1" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-medium opacity-80 uppercase">Entrenamiento en curso</p>
+                                <h3 className="font-bold text-lg">{activeSession.dayName}</h3>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                            <div className="flex items-center gap-1 text-white/80">
+                                <Clock size={14} />
+                                <span className="font-mono text-sm">{formatElapsedTime()}</span>
+                            </div>
+                            <p className="text-xs opacity-80">{activeSession.exercises.length} ejercicios</p>
+                        </div>
+                    </div>
+                </Card>
+            )}
+
             {/* Header */}
             <header className="flex justify-between items-center">
                 <div>
