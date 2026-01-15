@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { useWorkout } from '../../contexts/WorkoutContext';
 import { useExercises } from '../../contexts/ExerciseContext';
-import { Trash2, Plus, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { Trash2, Plus, ChevronDown, ChevronUp, MessageSquare, GripVertical, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
-import { ExerciseList } from '../exercises/ExerciseList';
 import { Input } from '../common/Input';
 
 const SET_TYPES = [
@@ -16,10 +15,11 @@ const SET_TYPES = [
 ];
 
 export function DayConfig({ day, onClose }) {
-    const { updateDayRoutine, addExerciseToDay, removeExerciseFromDay, updateDayExercise } = useWorkout();
-    const { getExerciseById } = useExercises();
+    const { updateDayRoutine, addExerciseToDay, removeExerciseFromDay, updateDayExercise, reorderExerciseInDay } = useWorkout();
+    const { exercises, getExerciseById } = useExercises();
     const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState(false);
     const [expandedExercise, setExpandedExercise] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleNameChange = (e) => {
         updateDayRoutine(day.id, { name: e.target.value });
@@ -29,9 +29,22 @@ export function DayConfig({ day, onClose }) {
         if (day.exercises.find(ex => ex.exerciseId === exerciseId)) return;
         addExerciseToDay(day.id, exerciseId);
         setIsExerciseSelectorOpen(false);
+        setSearchTerm('');
+    };
+
+    const moveExercise = (index, direction) => {
+        const newIndex = index + direction;
+        if (newIndex < 0 || newIndex >= day.exercises.length) return;
+        reorderExerciseInDay(day.id, index, newIndex);
     };
 
     const getSetTypeInfo = (type) => SET_TYPES.find(t => t.value === type) || SET_TYPES[0];
+
+    // Filter exercises for selector
+    const filteredExercises = exercises.filter(ex => 
+        ex.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
+        !day.exercises.some(de => de.exerciseId === ex.id)
+    ).slice(0, 20);
 
     return (
         <div className="space-y-6">
@@ -43,13 +56,18 @@ export function DayConfig({ day, onClose }) {
             />
 
             <div>
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-3">
                     <h3 className="text-sm font-medium text-text-secondary">Ejercicios ({day.exercises.length})</h3>
-                    <Button size="sm" variant="ghost" onClick={() => setIsExerciseSelectorOpen(true)}>
+                    <Button 
+                        size="sm" 
+                        className="bg-brand-lime text-brand-dark hover:bg-brand-lime/90"
+                        onClick={() => setIsExerciseSelectorOpen(true)}
+                    >
                         <Plus className="h-4 w-4 mr-1" /> Agregar
                     </Button>
                 </div>
-                <div className="space-y-3">
+                
+                <div className="space-y-2 max-h-[50vh] overflow-y-auto pr-1">
                     {day.exercises.map((dayExercise, index) => {
                         const exerciseDef = getExerciseById(dayExercise.exerciseId);
                         if (!exerciseDef) return null;
@@ -57,72 +75,100 @@ export function DayConfig({ day, onClose }) {
                         const setTypeInfo = getSetTypeInfo(dayExercise.setType);
 
                         return (
-                            <div key={`${day.id}-ex-${index}`} className="flex flex-col bg-surface-light/30 rounded-lg p-3 space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <div className={`w-2 h-2 rounded-full ${setTypeInfo.color}`} />
-                                        <span className="font-medium">{exerciseDef.name}</span>
-                                    </div>
-                                    <div className="flex items-center gap-1">
-                                        <Button 
-                                            size="icon" 
-                                            variant="ghost" 
-                                            className="h-6 w-6" 
-                                            onClick={() => setExpandedExercise(isExpanded ? null : index)}
+                            <div key={`${day.id}-ex-${index}`} className={`bg-brand-gray/30 rounded-xl overflow-hidden transition-all ${isExpanded ? 'ring-1 ring-brand-lime/50' : ''}`}>
+                                {/* Header - always visible */}
+                                <div 
+                                    className="flex items-center gap-2 p-3 cursor-pointer"
+                                    onClick={() => setExpandedExercise(isExpanded ? null : index)}
+                                >
+                                    {/* Order controls */}
+                                    <div className="flex flex-col gap-0.5">
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); moveExercise(index, -1); }}
+                                            disabled={index === 0}
+                                            className={`p-0.5 rounded ${index === 0 ? 'text-gray-600' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
                                         >
-                                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                                        </Button>
-                                        <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => removeExerciseFromDay(day.id, index)}>
-                                            <Trash2 className="h-4 w-4 text-danger/70" />
-                                        </Button>
+                                            <ArrowUp size={12} />
+                                        </button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); moveExercise(index, 1); }}
+                                            disabled={index === day.exercises.length - 1}
+                                            className={`p-0.5 rounded ${index === day.exercises.length - 1 ? 'text-gray-600' : 'text-gray-400 hover:text-white hover:bg-white/10'}`}
+                                        >
+                                            <ArrowDown size={12} />
+                                        </button>
+                                    </div>
+
+                                    {/* Exercise info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <div className={`w-2 h-2 rounded-full flex-shrink-0 ${setTypeInfo.color}`} />
+                                            <span className="font-medium text-white truncate">{exerciseDef.name}</span>
+                                        </div>
+                                        <p className="text-xs text-gray-400 mt-0.5">
+                                            {dayExercise.targetSets} series × {dayExercise.targetReps} reps
+                                            {dayExercise.notes && <span className="ml-2 text-brand-lime">📝</span>}
+                                        </p>
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="flex items-center gap-1">
+                                        {isExpanded ? <ChevronUp size={18} className="text-gray-400" /> : <ChevronDown size={18} className="text-gray-400" />}
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); removeExerciseFromDay(day.id, index); }}
+                                            className="p-1.5 rounded-lg text-red-400/70 hover:text-red-400 hover:bg-red-400/10 transition-colors"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
                                     </div>
                                 </div>
                                 
-                                {/* Quick config row */}
-                                <div className="grid grid-cols-3 gap-2">
-                                    <div>
-                                        <label className="text-[10px] text-text-secondary uppercase">Series</label>
-                                        <Input
-                                            type="number"
-                                            className="h-8 text-xs"
-                                            value={dayExercise.targetSets}
-                                            onChange={(e) => updateDayExercise(day.id, index, { targetSets: parseInt(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] text-text-secondary uppercase">Reps</label>
-                                        <Input
-                                            className="h-8 text-xs"
-                                            value={dayExercise.targetReps}
-                                            placeholder="8-12"
-                                            onChange={(e) => updateDayExercise(day.id, index, { targetReps: e.target.value })}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="text-[10px] text-text-secondary uppercase">Descanso</label>
-                                        <Input
-                                            type="number"
-                                            className="h-8 text-xs"
-                                            value={dayExercise.restSeconds}
-                                            placeholder="90"
-                                            onChange={(e) => updateDayExercise(day.id, index, { restSeconds: parseInt(e.target.value) || 0 })}
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Expanded options */}
+                                {/* Expanded content */}
                                 {isExpanded && (
-                                    <div className="space-y-3 pt-2 border-t border-white/10">
+                                    <div className="px-3 pb-3 space-y-3 border-t border-white/5 pt-3">
+                                        {/* Quick config row */}
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 uppercase block mb-1">Series</label>
+                                                <input
+                                                    type="number"
+                                                    className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                                    value={dayExercise.targetSets}
+                                                    onChange={(e) => updateDayExercise(day.id, index, { targetSets: parseInt(e.target.value) || 0 })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 uppercase block mb-1">Reps</label>
+                                                <input
+                                                    className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                                    value={dayExercise.targetReps}
+                                                    placeholder="8-12"
+                                                    onChange={(e) => updateDayExercise(day.id, index, { targetReps: e.target.value })}
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="text-[10px] text-gray-500 uppercase block mb-1">Descanso (s)</label>
+                                                <input
+                                                    type="number"
+                                                    className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                                                    value={dayExercise.restSeconds}
+                                                    placeholder="90"
+                                                    onChange={(e) => updateDayExercise(day.id, index, { restSeconds: parseInt(e.target.value) || 0 })}
+                                                />
+                                            </div>
+                                        </div>
+
+                                        {/* Set Type */}
                                         <div>
-                                            <label className="text-[10px] text-text-secondary uppercase mb-1 block">Tipo de Serie</label>
-                                            <div className="flex flex-wrap gap-1">
+                                            <label className="text-[10px] text-gray-500 uppercase block mb-2">Tipo de Serie</label>
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {SET_TYPES.map(type => (
                                                     <button
                                                         key={type.value}
                                                         onClick={() => updateDayExercise(day.id, index, { setType: type.value })}
-                                                        className={`px-2 py-1 text-xs rounded-md transition-colors ${
+                                                        className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
                                                             dayExercise.setType === type.value 
-                                                                ? `${type.color} text-white` 
+                                                                ? `${type.color} text-white shadow-lg` 
                                                                 : 'bg-white/10 text-gray-400 hover:bg-white/20'
                                                         }`}
                                                     >
@@ -131,13 +177,15 @@ export function DayConfig({ day, onClose }) {
                                                 ))}
                                             </div>
                                         </div>
+
+                                        {/* Notes */}
                                         <div>
-                                            <label className="text-[10px] text-text-secondary uppercase mb-1 block">
+                                            <label className="text-[10px] text-gray-500 uppercase block mb-1">
                                                 <MessageSquare className="inline h-3 w-3 mr-1" />
-                                                Notas (stretch, pesado, backoff, etc.)
+                                                Notas
                                             </label>
-                                            <Input
-                                                className="h-8 text-xs"
+                                            <input
+                                                className="w-full h-10 px-3 text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
                                                 value={dayExercise.notes || ''}
                                                 placeholder="ej: pesado + backoff, stretch en el bajo"
                                                 onChange={(e) => updateDayExercise(day.id, index, { notes: e.target.value })}
@@ -145,33 +193,64 @@ export function DayConfig({ day, onClose }) {
                                         </div>
                                     </div>
                                 )}
-
-                                {/* Show notes preview if collapsed but has notes */}
-                                {!isExpanded && dayExercise.notes && (
-                                    <p className="text-[10px] text-gray-400 italic truncate">
-                                        📝 {dayExercise.notes}
-                                    </p>
-                                )}
                             </div>
                         );
                     })}
+                    
                     {day.exercises.length === 0 && (
-                        <div className="text-center py-6 text-text-secondary text-sm border border-dashed border-surface-light rounded-lg">
-                            Sin ejercicios asignados
+                        <div className="text-center py-8 text-gray-500 text-sm border-2 border-dashed border-white/10 rounded-xl">
+                            <p className="mb-2">Sin ejercicios</p>
+                            <Button 
+                                size="sm" 
+                                className="bg-brand-lime text-brand-dark"
+                                onClick={() => setIsExerciseSelectorOpen(true)}
+                            >
+                                <Plus className="h-4 w-4 mr-1" /> Agregar primer ejercicio
+                            </Button>
                         </div>
                     )}
                 </div>
             </div>
 
+            {/* Exercise Selector Modal */}
             <Modal
                 isOpen={isExerciseSelectorOpen}
-                onClose={() => setIsExerciseSelectorOpen(false)}
+                onClose={() => { setIsExerciseSelectorOpen(false); setSearchTerm(''); }}
                 title="Agregar Ejercicio"
             >
-                <ExerciseList
-                    onSelect={handleAddExercise}
-                    selectedIds={day.exercises.map(ex => ex.exerciseId)}
-                />
+                <div className="space-y-4">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-3 h-4 w-4 text-gray-500" />
+                        <input
+                            placeholder="Buscar ejercicio..."
+                            className="w-full h-10 pl-9 pr-3 text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+                    <div className="max-h-64 overflow-y-auto space-y-1">
+                        {filteredExercises.map(ex => (
+                            <button
+                                key={ex.id}
+                                onClick={() => handleAddExercise(ex.id)}
+                                className="w-full p-3 bg-brand-gray/30 hover:bg-brand-gray/50 rounded-xl text-left transition-colors flex justify-between items-center"
+                            >
+                                <div>
+                                    <span className="font-medium text-white">{ex.name}</span>
+                                    <span className="text-xs text-gray-400 ml-2">{ex.muscleGroup}</span>
+                                </div>
+                                <Plus size={18} className="text-brand-lime" />
+                            </button>
+                        ))}
+                        {filteredExercises.length === 0 && searchTerm && (
+                            <p className="text-center text-gray-500 py-4">No se encontraron ejercicios</p>
+                        )}
+                        {filteredExercises.length === 0 && !searchTerm && (
+                            <p className="text-center text-gray-500 py-4">Escribí para buscar ejercicios</p>
+                        )}
+                    </div>
+                </div>
             </Modal>
         </div>
     );

@@ -198,6 +198,33 @@ export function WorkoutProvider({ children }) {
         await supabase.from('workout_day_exercises').delete().eq('id', exercise.id);
     };
 
+    const reorderExerciseInDay = async (dayId, fromIndex, toIndex) => {
+        const day = routine.find(d => d.id === dayId);
+        if (!day || fromIndex < 0 || toIndex < 0 || fromIndex >= day.exercises.length || toIndex >= day.exercises.length) return;
+
+        // Reorder locally
+        const newExercises = [...day.exercises];
+        const [moved] = newExercises.splice(fromIndex, 1);
+        newExercises.splice(toIndex, 0, moved);
+
+        // Update order field for all exercises
+        const updatedExercises = newExercises.map((ex, i) => ({ ...ex, order: i }));
+
+        setRoutine(prev => prev.map(d => {
+            if (d.id === dayId) {
+                return { ...d, exercises: updatedExercises };
+            }
+            return d;
+        }));
+
+        // Update order in DB for affected exercises
+        for (let i = 0; i < updatedExercises.length; i++) {
+            if (updatedExercises[i].id) {
+                await supabase.from('workout_day_exercises').update({ order: i }).eq('id', updatedExercises[i].id);
+            }
+        }
+    };
+
 
     // --- Session Logic ---
 
@@ -435,6 +462,7 @@ export function WorkoutProvider({ children }) {
         addExerciseToDay,
         updateDayExercise,
         removeExerciseFromDay,
+        reorderExerciseInDay,
         startSession,
         updateSessionSet,
         addSetToExercise,
