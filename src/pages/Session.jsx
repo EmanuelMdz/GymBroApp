@@ -107,7 +107,7 @@ export default function Session() {
     const totalProgress = getTotalProgress();
 
     return (
-        <div className="min-h-screen pb-40">
+        <div className="min-h-screen pb-44">
             {/* Header */}
             <div className="sticky top-0 z-30 bg-brand-dark/95 backdrop-blur-sm pb-4">
                 <div className="flex items-center justify-between mb-4">
@@ -320,7 +320,7 @@ export default function Session() {
             </div>
 
             {/* Finish Button - Fixed at bottom */}
-            <div className="fixed bottom-24 left-4 right-4 z-40">
+            <div className="fixed bottom-28 left-4 right-4 z-40">
                 <Button
                     onClick={() => setShowFinishConfirm(true)}
                     className="w-full h-12 bg-brand-lime text-brand-dark hover:bg-brand-lime/90 rounded-xl text-sm font-bold shadow-lg"

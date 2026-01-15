@@ -190,36 +190,61 @@ export default function Home() {
                 </Card>
             </div>
 
-            {/* Quick Access to Routine Days */}
+            {/* Quick Access to Routine Days - Show ALL */}
             {routine.length > 0 && (
                 <div className="space-y-3">
                     <div className="flex justify-between items-center">
                         <h2 className="text-sm font-bold text-white uppercase tracking-wide">Tu Semana</h2>
                         <Button variant="ghost" size="sm" className="text-brand-lime text-xs" onClick={() => navigate('/routine')}>
-                            Ver todo
+                            Editar
                         </Button>
                     </div>
                     <div className="space-y-2">
-                        {routine.filter(day => day.exercises && day.exercises.length > 0).slice(0, 3).map(day => (
-                            <Card 
-                                key={day.id} 
-                                className="bg-brand-card border-white/5 p-4 flex justify-between items-center cursor-pointer hover:bg-brand-gray/50 transition-colors"
-                                onClick={() => startSession(day.id)}
-                            >
-                                <div className="flex items-center gap-3">
-                                    <div className="w-10 h-10 rounded-xl bg-brand-lime/20 flex items-center justify-center">
-                                        <Dumbbell size={18} className="text-brand-lime" />
+                        {routine.filter(day => day.exercises && day.exercises.length > 0).map((day, idx) => {
+                            // Check if this day was completed this week
+                            const oneWeekAgo = new Date();
+                            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+                            const wasCompletedThisWeek = history.some(s => 
+                                s.workoutDayId === day.id && new Date(s.date) >= oneWeekAgo
+                            );
+                            
+                            return (
+                                <Card 
+                                    key={day.id} 
+                                    className={`border-white/5 p-3 flex justify-between items-center cursor-pointer transition-colors ${
+                                        wasCompletedThisWeek 
+                                            ? 'bg-green-500/10 border-green-500/20' 
+                                            : 'bg-brand-card hover:bg-brand-gray/50'
+                                    }`}
+                                    onClick={() => !wasCompletedThisWeek && startSession(day.id)}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                                            wasCompletedThisWeek ? 'bg-green-500/20' : 'bg-brand-lime/20'
+                                        }`}>
+                                            {wasCompletedThisWeek ? (
+                                                <span className="text-green-500 text-lg">✓</span>
+                                            ) : (
+                                                <span className="text-brand-lime font-bold text-sm">{idx + 1}</span>
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h3 className={`font-medium text-sm ${wasCompletedThisWeek ? 'text-gray-400 line-through' : 'text-white'}`}>
+                                                {day.name}
+                                            </h3>
+                                            <p className="text-[11px] text-gray-500">{day.exercises.length} ejercicios</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-semibold text-white">{day.name}</h3>
-                                        <p className="text-xs text-gray-400">{day.exercises.length} ejercicios</p>
-                                    </div>
-                                </div>
-                                <Button size="sm" className="bg-brand-lime text-brand-dark hover:bg-brand-lime/90 rounded-full px-4 text-xs font-bold">
-                                    Iniciar
-                                </Button>
-                            </Card>
-                        ))}
+                                    {wasCompletedThisWeek ? (
+                                        <span className="text-[10px] text-green-500 font-medium">Completado</span>
+                                    ) : (
+                                        <Button size="sm" className="bg-brand-lime text-brand-dark hover:bg-brand-lime/90 rounded-full px-3 text-[11px] font-bold h-8">
+                                            Iniciar
+                                        </Button>
+                                    )}
+                                </Card>
+                            );
+                        })}
                     </div>
                 </div>
             )}
