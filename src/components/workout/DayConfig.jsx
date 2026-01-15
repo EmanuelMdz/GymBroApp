@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useWorkout } from '../../contexts/WorkoutContext';
 import { useExercises } from '../../contexts/ExerciseContext';
-import { Trash2, Plus, ChevronDown, ChevronUp, MessageSquare, GripVertical, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trash2, Plus, ChevronDown, ChevronUp, MessageSquare, Search, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '../common/Button';
 import { Modal } from '../common/Modal';
 import { Input } from '../common/Input';
@@ -20,6 +20,23 @@ export function DayConfig({ day, onClose }) {
     const [isExerciseSelectorOpen, setIsExerciseSelectorOpen] = useState(false);
     const [expandedExercise, setExpandedExercise] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+
+    const repOptions = useMemo(() => Array.from({ length: 30 }, (_, i) => i + 1), []);
+
+    const parseRepRange = (value) => {
+        if (!value || typeof value !== 'string') return { min: 8, max: 12 };
+        const match = value.match(/(\d{1,2})\s*-\s*(\d{1,2})/);
+        if (!match) return { min: 8, max: 12 };
+        const min = Math.max(1, Math.min(30, parseInt(match[1], 10)));
+        const max = Math.max(1, Math.min(30, parseInt(match[2], 10)));
+        return { min: Math.min(min, max), max: Math.max(min, max) };
+    };
+
+    const classifySetTypeFromRange = (min, max) => {
+        if (min >= 8) return 'hypertrophy';
+        if (max <= 7) return 'strength';
+        return 'normal';
+    };
 
     const handleNameChange = (e) => {
         updateDayRoutine(day.id, { name: e.target.value });
@@ -103,7 +120,7 @@ export function DayConfig({ day, onClose }) {
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <div className={`w-2 h-2 rounded-full flex-shrink-0 ${setTypeInfo.color}`} />
-                                            <span className="font-medium text-white truncate">{exerciseDef.name}</span>
+                                            <span className="font-medium text-white">{exerciseDef.name}</span>
                                         </div>
                                         <p className="text-xs text-gray-400 mt-0.5">
                                             {dayExercise.targetSets} series × {dayExercise.targetReps} reps
@@ -139,12 +156,49 @@ export function DayConfig({ day, onClose }) {
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-gray-500 uppercase block mb-1">Reps</label>
-                                                <input
-                                                    className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none"
-                                                    value={dayExercise.targetReps}
-                                                    placeholder="8-12"
-                                                    onChange={(e) => updateDayExercise(day.id, index, { targetReps: e.target.value })}
-                                                />
+                                                {(() => {
+                                                    const range = parseRepRange(dayExercise.targetReps);
+                                                    return (
+                                                        <div className="grid grid-cols-2 gap-1">
+                                                            <select
+                                                                value={range.min}
+                                                                onChange={(e) => {
+                                                                    const newMin = parseInt(e.target.value, 10);
+                                                                    const fixedMax = Math.max(newMin, range.max);
+                                                                    const targetReps = `${newMin}-${fixedMax}`;
+                                                                    const next = { targetReps };
+                                                                    if (!['dropset', 'amrap'].includes(dayExercise.setType)) {
+                                                                        next.setType = classifySetTypeFromRange(newMin, fixedMax);
+                                                                    }
+                                                                    updateDayExercise(day.id, index, next);
+                                                                }}
+                                                                className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none appearance-none"
+                                                            >
+                                                                {repOptions.map(n => (
+                                                                    <option key={`min-${n}`} value={n} className="bg-brand-card text-white">{n}</option>
+                                                                ))}
+                                                            </select>
+                                                            <select
+                                                                value={range.max}
+                                                                onChange={(e) => {
+                                                                    const newMax = parseInt(e.target.value, 10);
+                                                                    const fixedMin = Math.min(range.min, newMax);
+                                                                    const targetReps = `${fixedMin}-${newMax}`;
+                                                                    const next = { targetReps };
+                                                                    if (!['dropset', 'amrap'].includes(dayExercise.setType)) {
+                                                                        next.setType = classifySetTypeFromRange(fixedMin, newMax);
+                                                                    }
+                                                                    updateDayExercise(day.id, index, next);
+                                                                }}
+                                                                className="w-full h-10 text-center text-sm bg-white/10 border border-white/10 rounded-lg text-white focus:border-brand-lime focus:outline-none appearance-none"
+                                                            >
+                                                                {repOptions.map(n => (
+                                                                    <option key={`max-${n}`} value={n} className="bg-brand-card text-white">{n}</option>
+                                                                ))}
+                                                            </select>
+                                                        </div>
+                                                    );
+                                                })()}
                                             </div>
                                             <div>
                                                 <label className="text-[10px] text-gray-500 uppercase block mb-1">Descanso (s)</label>
