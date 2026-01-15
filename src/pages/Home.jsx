@@ -205,7 +205,7 @@ export default function Home() {
                             const oneWeekAgo = new Date();
                             oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                             const wasCompletedThisWeek = history.some(s => 
-                                s.workoutDayId === day.id && new Date(s.date) >= oneWeekAgo
+                                (s.workout_day_id === day.id || s.workoutDayId === day.id) && new Date(s.date) >= oneWeekAgo
                             );
                             
                             return (
