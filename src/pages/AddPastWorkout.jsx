@@ -30,11 +30,35 @@ export default function AddPastWorkout() {
     const [searchTerm, setSearchTerm] = useState('');
     const [saving, setSaving] = useState(false);
 
+    // Filter days that have exercises
     const activeDays = routine.filter(d => d.exercises && d.exercises.length > 0);
+    
+    console.log('Routine:', routine);
+    console.log('Active days:', activeDays);
 
     const filteredExercises = exercises.filter(ex =>
         ex.name.toLowerCase().includes(searchTerm.toLowerCase())
     ).slice(0, 20);
+    
+    // When selecting a day, pre-load its exercises
+    const handleDaySelect = (dayId) => {
+        setSelectedDayId(dayId);
+        if (dayId) {
+            const day = routine.find(d => d.id === dayId);
+            if (day && day.exercises) {
+                // Pre-populate with the day's exercises
+                const preloadedExercises = day.exercises.map(ex => {
+                    const exDef = exercises.find(e => e.id === ex.exerciseId);
+                    return {
+                        exerciseId: ex.exerciseId,
+                        exerciseName: exDef?.name || 'Ejercicio',
+                        sets: Array(ex.targetSets || 3).fill(null).map(() => ({ weight: 0, reps: 0, rir: 2 }))
+                    };
+                });
+                setWorkoutExercises(preloadedExercises);
+            }
+        }
+    };
 
     const addExercise = (exercise) => {
         setWorkoutExercises([...workoutExercises, {
@@ -114,12 +138,12 @@ export default function AddPastWorkout() {
                 <label className="text-xs text-gray-400 uppercase block mb-2">Tipo de rutina (opcional)</label>
                 <select
                     value={selectedDayId}
-                    onChange={(e) => setSelectedDayId(e.target.value)}
+                    onChange={(e) => handleDaySelect(e.target.value)}
                     className="w-full bg-white/10 border border-white/10 rounded-xl px-4 py-3 text-white focus:border-brand-lime focus:outline-none"
                 >
-                    <option value="">Sin especificar</option>
-                    {activeDays.map(day => (
-                        <option key={day.id} value={day.id}>{day.name}</option>
+                    <option value="" className="bg-brand-dark">Sin especificar</option>
+                    {routine.filter(d => d.exercises && d.exercises.length > 0).map(day => (
+                        <option key={day.id} value={day.id} className="bg-brand-dark">{day.name}</option>
                     ))}
                 </select>
             </Card>
