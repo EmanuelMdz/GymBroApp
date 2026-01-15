@@ -448,6 +448,66 @@ export function WorkoutProvider({ children }) {
         setActiveSession(null);
     };
 
+    // Add a past workout manually
+    const addPastWorkout = async (date, dayId, exercisesData) => {
+        // exercisesData = [{ exerciseId, exerciseName, sets: [{ weight, reps, rir }] }]
+        
+        // Create session
+        const { data: dbSession, error: sessionError } = await supabase
+            .from('workout_sessions')
+            .insert([{
+                user_id: user.id,
+                workout_day_id: dayId,
+                date: date.toISOString(),
+                duration: exercisesData.length * 10, // Estimate 10 min per exercise
+                general_notes: 'Cargado manualmente'
+            }])
+            .select()
+            .single();
+
+        if (sessionError) {
+            console.error('Error creating past session:', sessionError);
+            return false;
+        }
+
+        // Add exercises and sets
+        for (const exData of exercisesData) {
+            const { data: perfEx, error: exError } = await supabase
+                .from('performed_exercises')
+                .insert([{
+                    session_id: dbSession.id,
+                    exercise_id: exData.exerciseId,
+                    exercise_name: exData.exerciseName,
+                    notes: ''
+                }])
+                .select()
+                .single();
+
+            if (exError) {
+                console.error('Error adding exercise:', exError);
+                continue;
+            }
+
+            // Add sets
+            const setsToInsert = exData.sets.map((set, i) => ({
+                performed_exercise_id: perfEx.id,
+                set_number: i + 1,
+                weight: set.weight || 0,
+                reps: set.reps || 0,
+                rir: set.rir ?? 2,
+                completed: true
+            }));
+
+            if (setsToInsert.length > 0) {
+                await supabase.from('performed_sets').insert(setsToInsert);
+            }
+        }
+
+        // Refresh history
+        await fetchHistory();
+        return true;
+    };
+
     const getDayName = (dayIndex) => {
         const days = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
         return days[dayIndex];
@@ -471,6 +531,7 @@ export function WorkoutProvider({ children }) {
         saveExerciseToDb,
         finishSession,
         cancelSession,
+        addPastWorkout,
         getDayName
     };
 

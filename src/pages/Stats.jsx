@@ -6,7 +6,8 @@ import { Modal } from '../components/common/Modal';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
 import { format, subDays, subWeeks, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Trophy, TrendingUp, Dumbbell, Calendar, ChevronRight, Flame, Target } from 'lucide-react';
+import { Trophy, TrendingUp, Dumbbell, Calendar, ChevronRight, Flame, Target, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // Time range filters
 const TIME_RANGES = [
@@ -23,6 +24,7 @@ const TIME_RANGES = [
 const BIG_THREE = ['Sentadilla con Barra', 'Bench Press', 'Peso Muerto', 'Peso Muerto Rumano'];
 
 export default function Stats() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState('progress');
     const [timeRange, setTimeRange] = useState('7d');
     const [selectedPR, setSelectedPR] = useState(null);
@@ -144,7 +146,16 @@ export default function Stats() {
 
     return (
         <div className="pb-24 space-y-4">
-            <h1 className="text-xl font-bold">Estadísticas</h1>
+            <div className="flex justify-between items-center">
+                <h1 className="text-xl font-bold">Estadísticas</h1>
+                <button
+                    onClick={() => navigate('/add-workout')}
+                    className="flex items-center gap-1 text-sm text-brand-lime hover:text-brand-lime/80 transition-colors"
+                >
+                    <Plus size={16} />
+                    Cargar pasado
+                </button>
+            </div>
 
             {/* Time Range Filter */}
             <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">

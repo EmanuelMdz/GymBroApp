@@ -11,6 +11,7 @@ import Exercises from './pages/Exercises';
 import Stats from './pages/Stats';
 import Auth from './pages/Auth';
 import Session from './pages/Session';
+import AddPastWorkout from './pages/AddPastWorkout';
 
 function AppContent() {
   const { session, loading } = useAuth();
@@ -33,6 +34,7 @@ function AppContent() {
             <Route path="/exercises" element={<Exercises />} />
             <Route path="/stats" element={<Stats />} />
             <Route path="/session" element={<Session />} />
+            <Route path="/add-workout" element={<AddPastWorkout />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
